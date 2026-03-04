@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Sincronizador de Chat Profissional</title>
+    <link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #7d5fff;
+            --bg: #0a0a0a;
+            --msg-bg: rgba(255, 255, 255, 0.05);
+            --font-main: 'Amatic SC', cursive;
+        }
+
+        body {
+            background: var(--bg);
+            color: #eee;
+            font-family: var(--font-main);
+            font-weight: 700;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Aviso de Segurança Inicial */
+        #privacy-notice {
+            background: #1a1a1a;
+            padding: 10px;
+            text-align: center;
+            font-size: 18px;
+            color: #2ecc71;
+            border-bottom: 1px solid #333;
+        }
+
+        .top-bar {
+            background: #111;
+            padding: 15px 25px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            border-bottom: 2px solid var(--primary);
+            z-index: 10;
+        }
+
+        .file-label {
+            background: var(--primary);
+            padding: 8px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 22px;
+            transition: 0.3s;
+        }
+
+        .file-label:hover { filter: brightness(1.2); }
+        input[type="file"] { display: none; }
+
+        .time-control {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-grow: 1;
+        }
+
+        #timer-slider {
+            flex-grow: 1;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
+        #display-time {
+            font-size: 28px;
+            min-width: 90px;
+            color: var(--primary);
+        }
+
+        #chat-flow {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            scroll-behavior: smooth;
+        }
+
+        .msg-card {
+            background: var(--msg-bg);
+            padding: 12px 18px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+            max-width: 85%;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .sender { color: var(--primary); font-size: 22px; }
+        .text { font-size: 30px; color: #fff; margin: 5px 0; }
+        .msg-time { font-size: 16px; opacity: 0.4; }
+
+        .btn-play {
+            background: #2ecc71;
+            border: none;
+            color: white;
+            font-family: var(--font-main);
+            font-size: 24px;
+            padding: 8px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .btn-play.pausado { background: #e74c3c; }
+    </style>
+</head>
+<body>
+
+<div id="privacy-notice">
+    🛡️ PRIVACIDADE GARANTIDA: SEU ARQUIVO JSON É PROCESSADO LOCALMENTE E NUNCA SAI DO SEU NAVEGADOR.
+</div>
+
+<div class="top-bar">
+    <label class="file-label">
+        📂 CARREGAR JSON
+        <input type="file" id="jsonInput" accept=".json">
+    </label>
+
+    <button id="playBtn" class="btn-play">PLAY SYNC</button>
+
+    <div class="time-control">
+        <span id="display-time">00:00:00</span>
+        <input type="range" id="timer-slider" value="0" min="0" step="1">
+    </div>
+</div>
+
+<div id="chat-flow">
+    <div style="text-align: center; margin-top: 50px; opacity: 0.5; font-size: 30px;">
+        AGUARDANDO CARREGAMENTO DO CHAT...
+    </div>
+</div>
+
+<script>
+    let messages = [];
+    let startTime = 0;
+    let isPlaying = false;
+    let interval;
+    let currentSeconds = 0;
+
+    const jsonInput = document.getElementById('jsonInput');
+    const playBtn = document.getElementById('playBtn');
+    const slider = document.getElementById('timer-slider');
+    const displayTime = document.getElementById('display-time');
+    const chatFlow = document.getElementById('chat-flow');
+
+    jsonInput.addEventListener('change', function(e) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            try {
+                const data = JSON.parse(event.target.result);
+                messages = data.messages || [];
+                if(messages.length > 0) {
+                    startTime = new Date(messages[0].date).getTime();
+                    const endTime = new Date(messages[messages.length - 1].date).getTime();
+                    slider.max = Math.floor((endTime - startTime) / 1000);
+                    chatFlow.innerHTML = '<div style="text-align: center; color: #2ecc71; font-size: 30px;">CHAT CARREGADO COM SUCESSO!</div>';
+                }
+            } catch(err) {
+                alert("Erro ao ler o JSON. Verifique se o arquivo está correto.");
+            }
+        };
+        reader.readAsText(e.target.files[0]);
+    });
+
+    function formatTime(s) {
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sec = s % 60;
+        return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
+    }
+
+    function updateChat() {
+        chatFlow.innerHTML = '';
+        const virtualTime = startTime + (currentSeconds * 1000);
+        const fragment = document.createDocumentFragment();
+
+        messages.forEach(m => {
+            const mTime = new Date(m.date).getTime();
+            if(mTime <= virtualTime) {
+                const card = document.createElement('div');
+                card.className = 'msg-card';
+                let content = Array.isArray(m.text) ? m.text.map(t => typeof t === 'string' ? t : t.text).join('') : m.text;
+                if(!content) return;
+                card.innerHTML = `<div class="sender">${m.from || 'Sistema'}</div><div class="text">${content}</div><div class="msg-time">${m.date.split('T')[1].substring(0,8)}</div>`;
+                fragment.appendChild(card);
+            }
+        });
+        chatFlow.appendChild(fragment);
+        chatFlow.scrollTop = chatFlow.scrollHeight;
+    }
+
+    playBtn.addEventListener('click', () => {
+        isPlaying = !isPlaying;
+        playBtn.innerText = isPlaying ? "PAUSE" : "PLAY SYNC";
+        playBtn.classList.toggle('pausado', isPlaying);
+        if(isPlaying) {
+            interval = setInterval(() => {
+                currentSeconds++;
+                slider.value = currentSeconds;
+                displayTime.innerText = formatTime(currentSeconds);
+                updateChat();
+            }, 1000);
+        } else {
+            clearInterval(interval);
+        }
+    });
+
+    slider.addEventListener('input', () => {
+        currentSeconds = parseInt(slider.value);
+        displayTime.innerText = formatTime(currentSeconds);
+        updateChat();
+    });
+</script>
+</body>
+</html>
