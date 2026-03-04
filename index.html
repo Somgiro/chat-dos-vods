@@ -2,57 +2,73 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Sincronizador</title>
+    <title>Trovo Sync Player</title>
     <link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #7d5fff;
-            --bg: #0a0a0a;
-            --msg-bg: rgba(255, 255, 255, 0.05);
+            /* Cores Oficiais Trovo */
+            --primary: #19d66b; 
+            --bg: #060809;
+            --topbar: #121517;
+            --msg-bg: rgba(25, 214, 107, 0.05);
             --font-main: 'Amatic SC', cursive;
         }
 
         body {
             background: var(--bg);
-            color: #eee;
+            color: #ffffff;
             font-family: var(--font-main);
             font-weight: 700;
             margin: 0;
             display: flex;
             flex-direction: column;
             height: 100vh;
+            overflow: hidden;
         }
 
-        /* Aviso de Segurança Inicial */
+        /* Mascote Trovo fixo */
+        .mascote-trovo {
+            position: fixed;
+            top: 15px;
+            right: 20px;
+            width: 80px;
+            z-index: 100;
+            pointer-events: none;
+            filter: drop-shadow(0 0 10px var(--primary));
+        }
+
         #privacy-notice {
-            background: #1a1a1a;
-            padding: 10px;
+            background: #19d66b;
+            padding: 5px;
             text-align: center;
-            font-size: 18px;
-            color: #2ecc71;
-            border-bottom: 1px solid #333;
+            font-size: 20px;
+            color: #000;
+            letter-spacing: 2px;
         }
 
         .top-bar {
-            background: #111;
+            background: var(--topbar);
             padding: 15px 25px;
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 15px;
             border-bottom: 2px solid var(--primary);
             z-index: 10;
         }
 
-        .file-label {
-            background: var(--primary);
-            padding: 8px 20px;
+        .file-label, .btn-popup {
+            background: #1f2326;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            padding: 5px 15px;
             border-radius: 5px;
             cursor: pointer;
             font-size: 22px;
+            font-family: var(--font-main);
             transition: 0.3s;
         }
 
-        .file-label:hover { filter: brightness(1.2); }
+        .file-label:hover, .btn-popup:hover { background: var(--primary); color: #000; }
         input[type="file"] { display: none; }
 
         .time-control {
@@ -69,7 +85,7 @@
         }
 
         #display-time {
-            font-size: 28px;
+            font-size: 32px;
             min-width: 90px;
             color: var(--primary);
         }
@@ -80,51 +96,55 @@
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
             scroll-behavior: smooth;
         }
 
         .msg-card {
             background: var(--msg-bg);
-            padding: 12px 18px;
-            border-radius: 8px;
+            padding: 10px 15px;
+            border-radius: 4px;
             border-left: 4px solid var(--primary);
-            max-width: 85%;
-            animation: fadeIn 0.3s ease;
+            max-width: 80%;
+            animation: slideUp 0.3s ease;
         }
 
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .sender { color: var(--primary); font-size: 22px; }
-        .text { font-size: 30px; color: #fff; margin: 5px 0; }
-        .msg-time { font-size: 16px; opacity: 0.4; }
+        .sender { color: var(--primary); font-size: 24px; text-transform: uppercase; }
+        .text { font-size: 32px; color: #fff; margin: 2px 0; line-height: 1; }
+        .msg-time { font-size: 18px; opacity: 0.3; }
 
         .btn-play {
-            background: #2ecc71;
+            background: var(--primary);
             border: none;
-            color: white;
+            color: #000;
             font-family: var(--font-main);
-            font-size: 24px;
-            padding: 8px 30px;
+            font-size: 28px;
+            padding: 5px 35px;
             border-radius: 5px;
             cursor: pointer;
+            font-weight: bold;
         }
-        .btn-play.pausado { background: #e74c3c; }
+        .btn-play.pausado { background: #ff4d4d; color: #fff; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #060809; }
+        ::-webkit-scrollbar-thumb { background: #19d66b; border-radius: 10px; }
     </style>
 </head>
 <body>
 
-<div id="privacy-notice">
-    🛡️ SAFE
-</div>
+<img src="https://raw.githubusercontent.com/Somgiro/chat-dos-vods/0183148c9b3532967da344748505de780454cae9/assets/image.png" class="mascote-trovo" alt="Trovo Mascot">
+
+<div id="privacy-notice">🛡️ AMBIENTE SEGURO - PROCESSAMENTO LOCAL</div>
 
 <div class="top-bar">
-    <label class="file-label">
-        📂 CARREGAR JSON
-        <input type="file" id="jsonInput" accept=".json">
-    </label>
-
+    <label class="file-label">📂 CARREGAR JSON <input type="file" id="jsonInput" accept=".json"></label>
+    
     <button id="playBtn" class="btn-play">PLAY SYNC</button>
+    <button class="btn-popup" onclick="abrirPopup()">POP-UP</button>
 
     <div class="time-control">
         <span id="display-time">00:00:00</span>
@@ -133,8 +153,8 @@
 </div>
 
 <div id="chat-flow">
-    <div style="text-align: center; margin-top: 50px; opacity: 0.5; font-size: 30px;">
-        AGUARDANDO CARREGAMENTO DO CHAT...
+    <div style="text-align: center; margin-top: 50px; opacity: 0.5; font-size: 35px;">
+        PREPARADO PARA O VOD? CARREGUE O CHAT...
     </div>
 </div>
 
@@ -161,11 +181,9 @@
                     startTime = new Date(messages[0].date).getTime();
                     const endTime = new Date(messages[messages.length - 1].date).getTime();
                     slider.max = Math.floor((endTime - startTime) / 1000);
-                    chatFlow.innerHTML = '<div style="text-align: center; color: #2ecc71; font-size: 30px;">CHAT CARREGADO COM SUCESSO!</div>';
+                    chatFlow.innerHTML = '<div style="text-align: center; color: #19d66b; font-size: 35px;">VOD SINCRONIZADO COM SUCESSO!</div>';
                 }
-            } catch(err) {
-                alert("Erro ao ler o JSON. Verifique se o arquivo está correto.");
-            }
+            } catch(err) { alert("Erro no JSON."); }
         };
         reader.readAsText(e.target.files[0]);
     });
@@ -188,7 +206,7 @@
                 const card = document.createElement('div');
                 card.className = 'msg-card';
                 let content = Array.isArray(m.text) ? m.text.map(t => typeof t === 'string' ? t : t.text).join('') : m.text;
-                if(!content) return;
+                if(!content || content.trim() === "") return;
                 card.innerHTML = `<div class="sender">${m.from || 'Sistema'}</div><div class="text">${content}</div><div class="msg-time">${m.date.split('T')[1].substring(0,8)}</div>`;
                 fragment.appendChild(card);
             }
@@ -208,9 +226,7 @@
                 displayTime.innerText = formatTime(currentSeconds);
                 updateChat();
             }, 1000);
-        } else {
-            clearInterval(interval);
-        }
+        } else { clearInterval(interval); }
     });
 
     slider.addEventListener('input', () => {
@@ -218,6 +234,10 @@
         displayTime.innerText = formatTime(currentSeconds);
         updateChat();
     });
+
+    function abrirPopup() {
+        const popup = window.open(window.location.href, 'ChatPopUp', 'width=450,height=600,menubar=no,toolbar=no,location=no,status=no');
+    }
 </script>
 </body>
 </html>
