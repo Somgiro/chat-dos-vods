@@ -2,139 +2,149 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Sincronizador</title>
+    <title>Trovo Sync Player</title>
     <link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #7d5fff;
-            --bg: #0a0a0a;
-            --msg-bg: rgba(255, 255, 255, 0.05);
+            --primary: #5ec98e; 
+            --bg: #060809;
+            --topbar: #121517;
+            --msg-bg: rgba(94, 201, 142, 0.07);
             --font-main: 'Amatic SC', cursive;
         }
 
+        * { box-sizing: border-box; }
+
         body {
             background: var(--bg);
-            color: #eee;
+            color: #ffffff;
             font-family: var(--font-main);
             font-weight: 700;
             margin: 0;
             display: flex;
             flex-direction: column;
             height: 100vh;
-        }
-
-        /* Aviso de Segurança Inicial */
-        #privacy-notice {
-            background: #1a1a1a;
-            padding: 10px;
-            text-align: center;
-            font-size: 18px;
-            color: #2ecc71;
-            border-bottom: 1px solid #333;
+            overflow: hidden;
+            min-width: 280px; 
         }
 
         .top-bar {
-            background: #111;
-            padding: 15px 25px;
+            background: var(--topbar);
+            padding: 8px 12px;
             display: flex;
             align-items: center;
-            gap: 20px;
+            justify-content: space-between;
+            gap: 10px;
             border-bottom: 2px solid var(--primary);
-            z-index: 10;
+            z-index: 20;
         }
 
-        .file-label {
-            background: var(--primary);
-            padding: 8px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 22px;
-            transition: 0.3s;
+        .controls-group {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+            align-items: center;
         }
-
-        .file-label:hover { filter: brightness(1.2); }
-        input[type="file"] { display: none; }
 
         .time-control {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 8px;
             flex-grow: 1;
+        }
+
+        .mascote-container {
+            position: fixed;
+            bottom: 15px;
+            right: 15px;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .mascote-trovo {
+            width: 55px;
+            opacity: 0.7;
+            filter: drop-shadow(0 0 5px var(--primary));
+        }
+
+        .file-label, .btn-play {
+            background: #1f2326;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+            padding: 2px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 18px;
+            font-family: var(--font-main);
+        }
+
+        .btn-play {
+            background: var(--primary);
+            color: #000;
+            font-weight: bold;
+            min-width: 60px;
         }
 
         #timer-slider {
             flex-grow: 1;
             accent-color: var(--primary);
-            cursor: pointer;
         }
 
         #display-time {
-            font-size: 28px;
-            min-width: 90px;
+            font-size: 20px;
             color: var(--primary);
+            min-width: 65px;
+            text-align: right;
         }
 
         #chat-flow {
             flex-grow: 1;
-            padding: 20px;
+            padding: 12px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
             gap: 10px;
-            scroll-behavior: smooth;
         }
 
         .msg-card {
             background: var(--msg-bg);
-            padding: 12px 18px;
-            border-radius: 8px;
-            border-left: 4px solid var(--primary);
-            max-width: 85%;
+            padding: 8px 12px;
+            border-left: 3px solid var(--primary);
+            max-width: 95%;
+            word-wrap: break-word;
             animation: fadeIn 0.3s ease;
         }
 
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        .sender { color: var(--primary); font-size: 22px; }
-        .text { font-size: 30px; color: #fff; margin: 5px 0; }
-        .msg-time { font-size: 16px; opacity: 0.4; }
+        .sender { color: var(--primary); font-size: 20px; }
+        .text { font-size: 28px; line-height: 1.1; margin: 2px 0; }
 
-        .btn-play {
-            background: #2ecc71;
-            border: none;
-            color: white;
-            font-family: var(--font-main);
-            font-size: 24px;
-            padding: 8px 30px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .btn-play.pausado { background: #e74c3c; }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: var(--primary); }
     </style>
 </head>
 <body>
 
-<div id="privacy-notice">
-    🛡️ SAFE
+<div class="mascote-container">
+    <img src="https://raw.githubusercontent.com/Somgiro/chat-dos-vods/0183148c9b3532967da344748505de780454cae9/assets/image.png" class="mascote-trovo">
 </div>
 
 <div class="top-bar">
-    <label class="file-label">
-        📂 CARREGAR JSON
-        <input type="file" id="jsonInput" accept=".json">
-    </label>
-
-    <button id="playBtn" class="btn-play">PLAY SYNC</button>
+    <div class="controls-group">
+        <label class="file-label">📂 <input type="file" id="jsonInput" accept=".json" style="display:none"></label>
+        <button id="playBtn" class="btn-play">PLAY</button>
+    </div>
 
     <div class="time-control">
-        <span id="display-time">00:00:00</span>
         <input type="range" id="timer-slider" value="0" min="0" step="1">
+        <span id="display-time">00:00:00</span>
     </div>
 </div>
 
 <div id="chat-flow">
-    <div style="text-align: center; margin-top: 50px; opacity: 0.5; font-size: 30px;">
-        AGUARDANDO CARREGAMENTO DO CHAT...
+    <div id="status-msg" style="text-align: center; margin-top: 30px; opacity: 0.3; font-size: 28px;">
+        CARREGUE O CHAT_LOG.JSON
     </div>
 </div>
 
@@ -155,16 +165,32 @@
         const reader = new FileReader();
         reader.onload = function(event) {
             try {
-                const data = JSON.parse(event.target.result);
-                messages = data.messages || [];
+                const rawContent = event.target.result.trim();
+                // Ajuste Sênior: Transforma as linhas do Python em uma lista JSON válida
+                const lines = rawContent.split('\n').filter(line => line.trim() !== "");
+                const validJsonArray = "[" + lines.join(",") + "]";
+                const rawData = JSON.parse(validJsonArray);
+
+                // Mapeia os campos do seu JSON (hora, msg) para o que o Player entende
+                messages = rawData.map(m => {
+                    // Criamos uma data completa para o JS poder calcular a diferença de segundos
+                    const [h, min, s] = m.hora.split(':');
+                    const d = new Date();
+                    d.setHours(h, min, s, 0);
+                    return { date: d.getTime(), text: m.msg };
+                });
+
                 if(messages.length > 0) {
-                    startTime = new Date(messages[0].date).getTime();
-                    const endTime = new Date(messages[messages.length - 1].date).getTime();
+                    startTime = messages[0].date;
+                    const endTime = messages[messages.length - 1].date;
                     slider.max = Math.floor((endTime - startTime) / 1000);
-                    chatFlow.innerHTML = '<div style="text-align: center; color: #2ecc71; font-size: 30px;">CHAT CARREGADO COM SUCESSO!</div>';
+                    slider.value = 0;
+                    currentSeconds = 0;
+                    document.getElementById('status-msg').innerText = "PRONTO PARA O VOD";
                 }
-            } catch(err) {
-                alert("Erro ao ler o JSON. Verifique se o arquivo está correto.");
+            } catch(err) { 
+                console.error(err);
+                alert("Erro ao ler JSON. Verifique se o arquivo está no formato correto."); 
             }
         };
         reader.readAsText(e.target.files[0]);
@@ -180,16 +206,15 @@
     function updateChat() {
         chatFlow.innerHTML = '';
         const virtualTime = startTime + (currentSeconds * 1000);
+        
+        // Só exibe mensagens que "já aconteceram" no tempo virtual
         const fragment = document.createDocumentFragment();
-
         messages.forEach(m => {
-            const mTime = new Date(m.date).getTime();
-            if(mTime <= virtualTime) {
+            if(m.date <= virtualTime) {
+                if(!m.text) return;
                 const card = document.createElement('div');
                 card.className = 'msg-card';
-                let content = Array.isArray(m.text) ? m.text.map(t => typeof t === 'string' ? t : t.text).join('') : m.text;
-                if(!content) return;
-                card.innerHTML = `<div class="sender">${m.from || 'Sistema'}</div><div class="text">${content}</div><div class="msg-time">${m.date.split('T')[1].substring(0,8)}</div>`;
+                card.innerHTML = `<div class="sender">Papiflix User</div><div class="text">${m.text}</div>`;
                 fragment.appendChild(card);
             }
         });
@@ -198,19 +223,23 @@
     }
 
     playBtn.addEventListener('click', () => {
+        if (messages.length === 0) return alert("Carregue o arquivo primeiro.");
         isPlaying = !isPlaying;
-        playBtn.innerText = isPlaying ? "PAUSE" : "PLAY SYNC";
-        playBtn.classList.toggle('pausado', isPlaying);
+        playBtn.innerText = isPlaying ? "PAUSE" : "PLAY";
         if(isPlaying) {
             interval = setInterval(() => {
                 currentSeconds++;
+                if (currentSeconds > slider.max) {
+                    clearInterval(interval);
+                    isPlaying = false;
+                    playBtn.innerText = "FIM";
+                    return;
+                }
                 slider.value = currentSeconds;
                 displayTime.innerText = formatTime(currentSeconds);
                 updateChat();
             }, 1000);
-        } else {
-            clearInterval(interval);
-        }
+        } else { clearInterval(interval); }
     });
 
     slider.addEventListener('input', () => {
