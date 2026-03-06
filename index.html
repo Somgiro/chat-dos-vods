@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>TROVADOR [chat da trovo - teste beta]</title>
+    <title>TROVADOR</title>
     <link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -90,7 +90,6 @@
             accent-color: var(--primary);
         }
 
-        /* ESTILO DO INPUT DE TEMPO */
         #display-time {
             font-size: 20px;
             color: var(--primary);
@@ -190,7 +189,15 @@
                     const [h, min, s] = m.hora.split(':');
                     const d = new Date();
                     d.setHours(h, min, s, 0);
-                    return { date: d.getTime(), text: m.msg };
+                    
+                    // GERA O ID ALEATÓRIO DE ATÉ 5 DÍGITOS AQUI
+                    const randomId = Math.floor(Math.random() * 99999) + 1;
+
+                    return { 
+                        date: d.getTime(), 
+                        text: m.msg,
+                        userId: randomId 
+                    };
                 });
 
                 messages.sort((a, b) => a.date - b.date);
@@ -249,7 +256,8 @@
                 if (m.text) {
                     const card = document.createElement('div');
                     card.className = 'msg-card';
-                    card.innerHTML = `<div class="sender">Papiflix User</div><div class="text">${m.text}</div>`;
+                    // AQUI É ONDE O ID APARECE
+                    card.innerHTML = `<div class="sender">User #${m.userId}</div><div class="text">${m.text}</div>`;
                     fragment.appendChild(card);
                     addedNew = true;
                 }
@@ -265,12 +273,10 @@
         }
     }
 
-    // LÓGICA DE DIGITAÇÃO E MÁSCARA
     displayTime.addEventListener('input', (e) => {
-        let val = e.target.value.replace(/\D/g, ""); // Remove o que não é número
+        let val = e.target.value.replace(/\D/g, ""); 
         if (val.length > 6) val = val.slice(0, 6);
         
-        // Aplica a máscara HH:MM:SS
         let masked = "";
         if (val.length > 0) masked += val.slice(0, 2);
         if (val.length > 2) masked += ":" + val.slice(2, 4);
