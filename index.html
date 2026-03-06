@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Trovo Sync Player</title>
+    <title>TROVADOR [chat da trovo - teste beta]</title>
     <link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -90,11 +90,22 @@
             accent-color: var(--primary);
         }
 
+        /* ESTILO DO INPUT DE TEMPO */
         #display-time {
             font-size: 20px;
             color: var(--primary);
-            min-width: 65px;
-            text-align: right;
+            background: transparent;
+            border: 1px solid transparent;
+            width: 85px;
+            text-align: center;
+            font-family: var(--font-main);
+            outline: none;
+            transition: border 0.3s;
+        }
+
+        #display-time:focus {
+            border-bottom: 1px solid var(--primary);
+            background: rgba(255,255,255,0.05);
         }
 
         #chat-flow {
@@ -104,6 +115,7 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
+            scroll-behavior: smooth;
         }
 
         .msg-card {
@@ -112,10 +124,13 @@
             border-left: 3px solid var(--primary);
             max-width: 95%;
             word-wrap: break-word;
-            animation: fadeIn 0.3s ease;
+            animation: fadeIn 0.3s ease forwards;
         }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateY(10px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
 
         .sender { color: var(--primary); font-size: 20px; }
         .text { font-size: 28px; line-height: 1.1; margin: 2px 0; }
@@ -138,7 +153,7 @@
 
     <div class="time-control">
         <input type="range" id="timer-slider" value="0" min="0" step="1">
-        <span id="display-time">00:00:00</span>
+        <input type="text" id="display-time" value="00:00:00" maxlength="8">
     </div>
 </div>
 
@@ -154,6 +169,7 @@
     let isPlaying = false;
     let interval;
     let currentSeconds = 0;
+    let lastRenderedIndex = -1;
 
     const jsonInput = document.getElementById('jsonInput');
     const playBtn = document.getElementById('playBtn');
@@ -166,31 +182,29 @@
         reader.onload = function(event) {
             try {
                 const rawContent = event.target.result.trim();
-                // Ajuste Sênior: Transforma as linhas do Python em uma lista JSON válida
                 const lines = rawContent.split('\n').filter(line => line.trim() !== "");
                 const validJsonArray = "[" + lines.join(",") + "]";
                 const rawData = JSON.parse(validJsonArray);
 
-                // Mapeia os campos do seu JSON (hora, msg) para o que o Player entende
                 messages = rawData.map(m => {
-                    // Criamos uma data completa para o JS poder calcular a diferença de segundos
                     const [h, min, s] = m.hora.split(':');
                     const d = new Date();
                     d.setHours(h, min, s, 0);
                     return { date: d.getTime(), text: m.msg };
                 });
 
+                messages.sort((a, b) => a.date - b.date);
+
                 if(messages.length > 0) {
                     startTime = messages[0].date;
                     const endTime = messages[messages.length - 1].date;
                     slider.max = Math.floor((endTime - startTime) / 1000);
-                    slider.value = 0;
-                    currentSeconds = 0;
+                    
+                    resetToTime(0);
                     document.getElementById('status-msg').innerText = "PRONTO PARA O VOD";
                 }
             } catch(err) { 
-                console.error(err);
-                alert("Erro ao ler JSON. Verifique se o arquivo está no formato correto."); 
+                alert("Erro ao ler JSON."); 
             }
         };
         reader.readAsText(e.target.files[0]);
@@ -203,29 +217,86 @@
         return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
     }
 
-    function updateChat() {
-        chatFlow.innerHTML = '';
-        const virtualTime = startTime + (currentSeconds * 1000);
-        
-        // Só exibe mensagens que "já aconteceram" no tempo virtual
-        const fragment = document.createDocumentFragment();
-        messages.forEach(m => {
-            if(m.date <= virtualTime) {
-                if(!m.text) return;
-                const card = document.createElement('div');
-                card.className = 'msg-card';
-                card.innerHTML = `<div class="sender">Papiflix User</div><div class="text">${m.text}</div>`;
-                fragment.appendChild(card);
-            }
-        });
-        chatFlow.appendChild(fragment);
-        chatFlow.scrollTop = chatFlow.scrollHeight;
+    function timeToSeconds(timeStr) {
+        const parts = timeStr.split(':');
+        if (parts.length !== 3) return null;
+        const h = parseInt(parts[0]) || 0;
+        const m = parseInt(parts[1]) || 0;
+        const s = parseInt(parts[2]) || 0;
+        return (h * 3600) + (m * 60) + s;
     }
+
+    function resetToTime(secs) {
+        currentSeconds = Math.min(Math.max(0, secs), slider.max);
+        slider.value = currentSeconds;
+        displayTime.value = formatTime(currentSeconds);
+        updateChat(true);
+    }
+
+    function updateChat(forceRefresh = false) {
+        if (forceRefresh) {
+            chatFlow.innerHTML = '';
+            lastRenderedIndex = -1;
+        }
+
+        const virtualTime = startTime + (currentSeconds * 1000);
+        const fragment = document.createDocumentFragment();
+        let addedNew = false;
+
+        for (let i = lastRenderedIndex + 1; i < messages.length; i++) {
+            const m = messages[i];
+            if (m.date <= virtualTime) {
+                if (m.text) {
+                    const card = document.createElement('div');
+                    card.className = 'msg-card';
+                    card.innerHTML = `<div class="sender">Papiflix User</div><div class="text">${m.text}</div>`;
+                    fragment.appendChild(card);
+                    addedNew = true;
+                }
+                lastRenderedIndex = i;
+            } else { break; }
+        }
+
+        if (addedNew) {
+            const status = document.getElementById('status-msg');
+            if(status) status.remove();
+            chatFlow.appendChild(fragment);
+            chatFlow.scrollTop = chatFlow.scrollHeight;
+        }
+    }
+
+    // LÓGICA DE DIGITAÇÃO E MÁSCARA
+    displayTime.addEventListener('input', (e) => {
+        let val = e.target.value.replace(/\D/g, ""); // Remove o que não é número
+        if (val.length > 6) val = val.slice(0, 6);
+        
+        // Aplica a máscara HH:MM:SS
+        let masked = "";
+        if (val.length > 0) masked += val.slice(0, 2);
+        if (val.length > 2) masked += ":" + val.slice(2, 4);
+        if (val.length > 4) masked += ":" + val.slice(4, 6);
+        
+        e.target.value = masked;
+    });
+
+    displayTime.addEventListener('change', () => {
+        const secs = timeToSeconds(displayTime.value);
+        if (secs !== null) {
+            resetToTime(secs);
+        } else {
+            displayTime.value = formatTime(currentSeconds);
+        }
+    });
+
+    displayTime.addEventListener('keydown', (e) => {
+        if (e.key === "Enter") displayTime.blur();
+    });
 
     playBtn.addEventListener('click', () => {
         if (messages.length === 0) return alert("Carregue o arquivo primeiro.");
         isPlaying = !isPlaying;
         playBtn.innerText = isPlaying ? "PAUSE" : "PLAY";
+        
         if(isPlaying) {
             interval = setInterval(() => {
                 currentSeconds++;
@@ -236,17 +307,16 @@
                     return;
                 }
                 slider.value = currentSeconds;
-                displayTime.innerText = formatTime(currentSeconds);
+                displayTime.value = formatTime(currentSeconds);
                 updateChat();
             }, 1000);
         } else { clearInterval(interval); }
     });
 
     slider.addEventListener('input', () => {
-        currentSeconds = parseInt(slider.value);
-        displayTime.innerText = formatTime(currentSeconds);
-        updateChat();
+        resetToTime(parseInt(slider.value));
     });
 </script>
+
 </body>
 </html>
