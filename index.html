@@ -1,169 +1,4 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <title>TROVADOR</title>
-    <link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary: #5ec98e; 
-            --bg: #060809;
-            --topbar: #121517;
-            --msg-bg: rgba(94, 201, 142, 0.07);
-            --font-main: 'Amatic SC', cursive;
-        }
-
-        * { box-sizing: border-box; }
-
-        body {
-            background: var(--bg);
-            color: #ffffff;
-            font-family: var(--font-main);
-            font-weight: 700;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
-            min-width: 280px; 
-        }
-
-        .top-bar {
-            background: var(--topbar);
-            padding: 8px 12px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            border-bottom: 2px solid var(--primary);
-            z-index: 20;
-        }
-
-        .controls-group {
-            display: flex;
-            gap: 6px;
-            flex-shrink: 0;
-            align-items: center;
-        }
-
-        .time-control {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-grow: 1;
-        }
-
-        .mascote-container {
-            position: fixed;
-            bottom: 15px;
-            right: 15px;
-            z-index: 100;
-            pointer-events: none;
-        }
-
-        .mascote-trovo {
-            width: 55px;
-            opacity: 0.7;
-            filter: drop-shadow(0 0 5px var(--primary));
-        }
-
-        .file-label, .btn-play {
-            background: #1f2326;
-            color: var(--primary);
-            border: 1px solid var(--primary);
-            padding: 2px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 18px;
-            font-family: var(--font-main);
-        }
-
-        .btn-play {
-            background: var(--primary);
-            color: #000;
-            font-weight: bold;
-            min-width: 60px;
-        }
-
-        #timer-slider {
-            flex-grow: 1;
-            accent-color: var(--primary);
-        }
-
-        #display-time {
-            font-size: 20px;
-            color: var(--primary);
-            background: transparent;
-            border: 1px solid transparent;
-            width: 85px;
-            text-align: center;
-            font-family: var(--font-main);
-            outline: none;
-            transition: border 0.3s;
-        }
-
-        #display-time:focus {
-            border-bottom: 1px solid var(--primary);
-            background: rgba(255,255,255,0.05);
-        }
-
-        #chat-flow {
-            flex-grow: 1;
-            padding: 12px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            scroll-behavior: smooth;
-        }
-
-        .msg-card {
-            background: var(--msg-bg);
-            padding: 8px 12px;
-            border-left: 3px solid var(--primary);
-            max-width: 95%;
-            word-wrap: break-word;
-            animation: fadeIn 0.3s ease forwards;
-        }
-
-        @keyframes fadeIn { 
-            from { opacity: 0; transform: translateY(10px); } 
-            to { opacity: 1; transform: translateY(0); } 
-        }
-
-        .sender { color: var(--primary); font-size: 20px; }
-        .text { font-size: 28px; line-height: 1.1; margin: 2px 0; }
-
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-thumb { background: var(--primary); }
-    </style>
-</head>
-<body>
-
-<div class="mascote-container">
-    <img src="https://raw.githubusercontent.com/Somgiro/chat-dos-vods/0183148c9b3532967da344748505de780454cae9/assets/image.png" class="mascote-trovo">
-</div>
-
-<div class="top-bar">
-    <div class="controls-group">
-        <label class="file-label">📂 <input type="file" id="jsonInput" accept=".json" style="display:none"></label>
-        <button id="playBtn" class="btn-play">PLAY</button>
-    </div>
-
-    <div class="time-control">
-        <input type="range" id="timer-slider" value="0" min="0" step="1">
-        <input type="text" id="display-time" value="00:00:00" maxlength="8">
-    </div>
-</div>
-
-<div id="chat-flow">
-    <div id="status-msg" style="text-align: center; margin-top: 30px; opacity: 0.3; font-size: 28px;">
-        CARREGUE O CHAT_LOG.JSON
-    </div>
-</div>
-
-<script>
-    let messages = [];
+let messages = [];
     let startTime = 0;
     let isPlaying = false;
     let interval;
@@ -190,13 +25,10 @@
                     const d = new Date();
                     d.setHours(h, min, s, 0);
                     
-                    // GERA O ID ALEATÓRIO DE ATÉ 5 DÍGITOS AQUI
-                    const randomId = Math.floor(Math.random() * 99999) + 1;
-
                     return { 
                         date: d.getTime(), 
                         text: m.msg,
-                        userId: randomId 
+                        userName: m.nick_name || "Sistema" // Mapeia o nome real capturado
                     };
                 });
 
@@ -208,10 +40,10 @@
                     slider.max = Math.floor((endTime - startTime) / 1000);
                     
                     resetToTime(0);
-                    document.getElementById('status-msg').innerText = "PRONTO PARA O VOD";
+                    document.getElementById('status-msg').innerText = "VOD CARREGADO - PRONTO";
                 }
             } catch(err) { 
-                alert("Erro ao ler JSON."); 
+                alert("Erro ao ler arquivo: verifique se o formato do JSON está correto."); 
             }
         };
         reader.readAsText(e.target.files[0]);
@@ -253,11 +85,11 @@
         for (let i = lastRenderedIndex + 1; i < messages.length; i++) {
             const m = messages[i];
             if (m.date <= virtualTime) {
-                if (m.text) {
+                // SÓ EXIBE SE TIVER TEXTO (evita balões vazios do log)
+                if (m.text && m.text.trim() !== "") {
                     const card = document.createElement('div');
                     card.className = 'msg-card';
-                    // AQUI É ONDE O ID APARECE
-                    card.innerHTML = `<div class="sender">${m.userId}</div><div class="text">${m.text}</div>`;
+                    card.innerHTML = `<div class="sender">${m.userName}</div><div class="text">${m.text}</div>`;
                     fragment.appendChild(card);
                     addedNew = true;
                 }
@@ -273,31 +105,7 @@
         }
     }
 
-    displayTime.addEventListener('input', (e) => {
-        let val = e.target.value.replace(/\D/g, ""); 
-        if (val.length > 6) val = val.slice(0, 6);
-        
-        let masked = "";
-        if (val.length > 0) masked += val.slice(0, 2);
-        if (val.length > 2) masked += ":" + val.slice(2, 4);
-        if (val.length > 4) masked += ":" + val.slice(4, 6);
-        
-        e.target.value = masked;
-    });
-
-    displayTime.addEventListener('change', () => {
-        const secs = timeToSeconds(displayTime.value);
-        if (secs !== null) {
-            resetToTime(secs);
-        } else {
-            displayTime.value = formatTime(currentSeconds);
-        }
-    });
-
-    displayTime.addEventListener('keydown', (e) => {
-        if (e.key === "Enter") displayTime.blur();
-    });
-
+    // Controles de Play/Pause
     playBtn.addEventListener('click', () => {
         if (messages.length === 0) return alert("Carregue o arquivo primeiro.");
         isPlaying = !isPlaying;
@@ -322,7 +130,9 @@
     slider.addEventListener('input', () => {
         resetToTime(parseInt(slider.value));
     });
-</script>
 
-</body>
-</html>
+    displayTime.addEventListener('change', () => {
+        const secs = timeToSeconds(displayTime.value);
+        if (secs !== null) resetToTime(secs);
+        else displayTime.value = formatTime(currentSeconds);
+    });
