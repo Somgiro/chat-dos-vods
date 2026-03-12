@@ -2,7 +2,6 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TROVADOR - PLAYER</title>
     <link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&display=swap" rel="stylesheet">
     <style>
@@ -13,7 +12,6 @@
             --msg-bg: rgba(255, 255, 255, 0.03);
             --font-main: 'Amatic SC', cursive;
         }
-
         body {
             background: var(--bg);
             color: #ffffff;
@@ -24,7 +22,6 @@
             height: 100vh;
             overflow: hidden;
         }
-
         .top-bar {
             background: var(--topbar);
             padding: 10px 15px;
@@ -34,7 +31,6 @@
             gap: 15px;
             border-bottom: 2px solid var(--primary);
         }
-
         .file-label, .btn-play {
             background: #1f2326;
             color: var(--primary);
@@ -45,9 +41,7 @@
             font-size: 20px;
             font-family: var(--font-main);
         }
-
         #timer-slider { flex-grow: 1; accent-color: var(--primary); }
-
         #display-time {
             font-size: 22px;
             color: var(--primary);
@@ -57,7 +51,6 @@
             text-align: center;
             font-family: var(--font-main);
         }
-
         #chat-flow {
             flex-grow: 1;
             padding: 20px;
@@ -66,25 +59,20 @@
             flex-direction: column;
             gap: 8px;
         }
-
         .msg-card {
             background: var(--msg-bg);
             padding: 10px 15px;
             border-left: 4px solid transparent;
             max-width: 98%;
-            animation: fadeIn 0.3s ease;
         }
-
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        .sender { font-size: 24px; font-weight: bold; }
+        .sender { font-size: 24px; font-weight: bold; margin-bottom: 2px; }
         .text { font-size: 28px; line-height: 1.1; color: #eee; }
     </style>
 </head>
 <body>
 
 <div class="top-bar">
-    <label class="file-label">📂 ABRIR CHAT_LOG.JSON <input type="file" id="jsonInput" style="display:none"></label>
+    <label class="file-label">📂 ABRIR LOG <input type="file" id="jsonInput" style="display:none"></label>
     <button id="playBtn" class="btn-play">PLAY</button>
     <input type="range" id="timer-slider" value="0">
     <input type="text" id="display-time" value="00:00:00" readonly>
@@ -113,17 +101,20 @@
     document.getElementById('jsonInput').addEventListener('change', function(e) {
         const reader = new FileReader();
         reader.onload = function(event) {
-            const lines = event.target.result.trim().split('\n');
-            messages = lines.map(line => {
-                const m = JSON.parse(line);
-                const [h, min, s] = m.hora.split(':');
-                const d = new Date(); d.setHours(h, min, s, 0);
-                return { date: d.getTime(), text: m.msg, user: m.nick_name || "Sistema" };
-            }).sort((a, b) => a.date - b.date);
+            try {
+                const lines = event.target.result.trim().split('\n').filter(l => l.trim());
+                messages = lines.map(line => {
+                    const m = JSON.parse(line);
+                    const [h, min, s] = m.hora.split(':');
+                    const d = new Date(); d.setHours(h, min, s, 0);
+                    return { date: d.getTime(), text: m.msg, user: m.nick_name || "Sistema" };
+                }).sort((a, b) => a.date - b.date);
 
-            startTime = messages[0].date;
-            document.getElementById('timer-slider').max = Math.floor((messages[messages.length - 1].date - startTime) / 1000);
-            resetToTime(0);
+                startTime = messages[0].date;
+                const endTime = messages[messages.length - 1].date;
+                document.getElementById('timer-slider').max = Math.floor((endTime - startTime) / 1000);
+                resetToTime(0);
+            } catch(e) { alert("Erro no JSON!"); }
         };
         reader.readAsText(e.target.files[0]);
     });
@@ -162,7 +153,13 @@
         if(isPlaying) {
             interval = setInterval(() => {
                 currentSeconds++;
-                resetToTime(currentSeconds);
+                if (currentSeconds > document.getElementById('timer-slider').max) {
+                    clearInterval(interval);
+                    return;
+                }
+                document.getElementById('timer-slider').value = currentSeconds;
+                document.getElementById('display-time').value = new Date(currentSeconds * 1000).toISOString().substr(11, 8);
+                updateChat();
             }, 1000);
         } else clearInterval(interval);
     });
