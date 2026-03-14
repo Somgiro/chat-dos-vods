@@ -42,15 +42,26 @@
             font-family: var(--font-main);
         }
         #timer-slider { flex-grow: 1; accent-color: var(--primary); }
+        
+        /* Estilo do relógio editável */
         #display-time {
             font-size: 22px;
             color: var(--primary);
-            background: transparent;
-            border: none;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid transparent;
             width: 90px;
             text-align: center;
             font-family: var(--font-main);
+            cursor: text;
+            border-radius: 4px;
+            transition: all 0.2s;
         }
+        #display-time:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(94, 201, 142, 0.1);
+        }
+
         #chat-flow {
             flex-grow: 1;
             padding: 20px;
@@ -75,7 +86,7 @@
     <label class="file-label">📂 ABRIR LOG <input type="file" id="jsonInput" style="display:none"></label>
     <button id="playBtn" class="btn-play">PLAY</button>
     <input type="range" id="timer-slider" value="0">
-    <input type="text" id="display-time" value="00:00:00" readonly>
+    <input type="text" id="display-time" value="00:00:00">
 </div>
 
 <div id="chat-flow"></div>
@@ -122,6 +133,7 @@
     function resetToTime(secs) {
         currentSeconds = secs;
         document.getElementById('timer-slider').value = secs;
+        // Formata os segundos de volta para o padrão HH:MM:SS no input
         document.getElementById('display-time').value = new Date(secs * 1000).toISOString().substr(11, 8);
         document.getElementById('chat-flow').innerHTML = '';
         lastRenderedIndex = -1;
@@ -153,8 +165,11 @@
         if(isPlaying) {
             interval = setInterval(() => {
                 currentSeconds++;
-                if (currentSeconds > document.getElementById('timer-slider').max) {
+                const maxVal = parseInt(document.getElementById('timer-slider').max);
+                if (currentSeconds > maxVal) {
                     clearInterval(interval);
+                    isPlaying = false;
+                    this.innerText = "PLAY";
                     return;
                 }
                 document.getElementById('timer-slider').value = currentSeconds;
@@ -166,6 +181,36 @@
 
     document.getElementById('timer-slider').addEventListener('input', function() {
         resetToTime(parseInt(this.value));
+    });
+
+    // NOVA LÓGICA: Sincronizar ao digitar e apertar ENTER
+    document.getElementById('display-time').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            const timeParts = this.value.split(':').map(val => parseInt(val) || 0);
+            let totalSeconds = 0;
+
+            if (timeParts.length === 3) {
+                // Considera HH:MM:SS
+                totalSeconds = (timeParts[0] * 3600) + (timeParts[1] * 60) + timeParts[2];
+            } else if (timeParts.length === 2) {
+                // Considera MM:SS
+                totalSeconds = (timeParts[0] * 60) + timeParts[1];
+            } else if (timeParts.length === 1) {
+                // Considera apenas segundos
+                totalSeconds = timeParts[0];
+            }
+
+            const maxSecs = parseInt(document.getElementById('timer-slider').max) || 0;
+            
+            if (!isNaN(totalSeconds) && totalSeconds >= 0) {
+                if (totalSeconds > maxSecs) totalSeconds = maxSecs;
+                resetToTime(totalSeconds);
+                this.blur(); // Remove o foco para confirmar a alteração visual
+            } else {
+                // Se der erro, volta para o tempo atual do slider
+                resetToTime(parseInt(document.getElementById('timer-slider').value));
+            }
+        }
     });
 </script>
 </body>
