@@ -2,165 +2,83 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>TROVADOR</title>
+    <title>TROVADOR - PLAYER</title>
     <link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #5ec98e; 
             --bg: #060809;
             --topbar: #121517;
-            --msg-bg: rgba(94, 201, 142, 0.07);
+            --msg-bg: rgba(255, 255, 255, 0.03);
             --font-main: 'Amatic SC', cursive;
         }
-
-        * { box-sizing: border-box; }
-
         body {
             background: var(--bg);
             color: #ffffff;
             font-family: var(--font-main);
-            font-weight: 700;
             margin: 0;
             display: flex;
             flex-direction: column;
             height: 100vh;
             overflow: hidden;
-            min-width: 280px; 
         }
-
         .top-bar {
             background: var(--topbar);
-            padding: 8px 12px;
+            padding: 10px 15px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 10px;
+            gap: 15px;
             border-bottom: 2px solid var(--primary);
-            z-index: 20;
         }
-
-        .controls-group {
-            display: flex;
-            gap: 6px;
-            flex-shrink: 0;
-            align-items: center;
-        }
-
-        .time-control {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-grow: 1;
-        }
-
-        .mascote-container {
-            position: fixed;
-            bottom: 15px;
-            right: 15px;
-            z-index: 100;
-            pointer-events: none;
-        }
-
-        .mascote-trovo {
-            width: 55px;
-            opacity: 0.7;
-            filter: drop-shadow(0 0 5px var(--primary));
-        }
-
         .file-label, .btn-play {
             background: #1f2326;
             color: var(--primary);
             border: 1px solid var(--primary);
-            padding: 2px 10px;
+            padding: 5px 15px;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 18px;
+            font-size: 20px;
             font-family: var(--font-main);
         }
-
-        .btn-play {
-            background: var(--primary);
-            color: #000;
-            font-weight: bold;
-            min-width: 60px;
-        }
-
-        #timer-slider {
-            flex-grow: 1;
-            accent-color: var(--primary);
-        }
-
+        #timer-slider { flex-grow: 1; accent-color: var(--primary); }
         #display-time {
-            font-size: 20px;
+            font-size: 22px;
             color: var(--primary);
             background: transparent;
-            border: 1px solid transparent;
-            width: 85px;
+            border: none;
+            width: 90px;
             text-align: center;
             font-family: var(--font-main);
-            outline: none;
-            transition: border 0.3s;
         }
-
-        #display-time:focus {
-            border-bottom: 1px solid var(--primary);
-            background: rgba(255,255,255,0.05);
-        }
-
         #chat-flow {
             flex-grow: 1;
-            padding: 12px;
+            padding: 20px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            scroll-behavior: smooth;
+            gap: 8px;
         }
-
         .msg-card {
             background: var(--msg-bg);
-            padding: 8px 12px;
-            border-left: 3px solid var(--primary);
-            max-width: 95%;
-            word-wrap: break-word;
-            animation: fadeIn 0.3s ease forwards;
+            padding: 10px 15px;
+            border-left: 4px solid transparent;
+            max-width: 98%;
         }
-
-        @keyframes fadeIn { 
-            from { opacity: 0; transform: translateY(10px); } 
-            to { opacity: 1; transform: translateY(0); } 
-        }
-
-        .sender { color: var(--primary); font-size: 20px; }
-        .text { font-size: 28px; line-height: 1.1; margin: 2px 0; }
-
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-thumb { background: var(--primary); }
+        .sender { font-size: 24px; font-weight: bold; margin-bottom: 2px; }
+        .text { font-size: 28px; line-height: 1.1; color: #eee; }
     </style>
 </head>
 <body>
 
-<div class="mascote-container">
-    <img src="https://raw.githubusercontent.com/Somgiro/chat-dos-vods/0183148c9b3532967da344748505de780454cae9/assets/image.png" class="mascote-trovo">
-</div>
-
 <div class="top-bar">
-    <div class="controls-group">
-        <label class="file-label">📂 <input type="file" id="jsonInput" accept=".json" style="display:none"></label>
-        <button id="playBtn" class="btn-play">PLAY</button>
-    </div>
-
-    <div class="time-control">
-        <input type="range" id="timer-slider" value="0" min="0" step="1">
-        <input type="text" id="display-time" value="00:00:00" maxlength="8">
-    </div>
+    <label class="file-label">📂 ABRIR LOG <input type="file" id="jsonInput" style="display:none"></label>
+    <button id="playBtn" class="btn-play">PLAY</button>
+    <input type="range" id="timer-slider" value="0">
+    <input type="text" id="display-time" value="00:00:00" readonly>
 </div>
 
-<div id="chat-flow">
-    <div id="status-msg" style="text-align: center; margin-top: 30px; opacity: 0.3; font-size: 28px;">
-        CARREGUE O CHAT_LOG.JSON
-    </div>
-</div>
+<div id="chat-flow"></div>
 
 <script>
     let messages = [];
@@ -169,160 +87,86 @@
     let interval;
     let currentSeconds = 0;
     let lastRenderedIndex = -1;
+    const userColors = {};
 
-    const jsonInput = document.getElementById('jsonInput');
-    const playBtn = document.getElementById('playBtn');
-    const slider = document.getElementById('timer-slider');
-    const displayTime = document.getElementById('display-time');
-    const chatFlow = document.getElementById('chat-flow');
+    function getUserColor(username) {
+        if (userColors[username]) return userColors[username];
+        let hash = 0;
+        for (let i = 0; i < username.length; i++) hash = username.charCodeAt(i) + ((hash << 5) - hash);
+        const color = `hsl(${Math.abs(hash % 360)}, 70%, 60%)`;
+        userColors[username] = color;
+        return color;
+    }
 
-    jsonInput.addEventListener('change', function(e) {
+    document.getElementById('jsonInput').addEventListener('change', function(e) {
         const reader = new FileReader();
         reader.onload = function(event) {
             try {
-                const rawContent = event.target.result.trim();
-                const lines = rawContent.split('\n').filter(line => line.trim() !== "");
-                const validJsonArray = "[" + lines.join(",") + "]";
-                const rawData = JSON.parse(validJsonArray);
-
-                messages = rawData.map(m => {
+                const lines = event.target.result.trim().split('\n').filter(l => l.trim());
+                messages = lines.map(line => {
+                    const m = JSON.parse(line);
                     const [h, min, s] = m.hora.split(':');
-                    const d = new Date();
-                    d.setHours(h, min, s, 0);
-                    
-                    // GERA O ID ALEATÓRIO DE ATÉ 5 DÍGITOS AQUI
-                    const randomId = Math.floor(Math.random() * 99999) + 1;
+                    const d = new Date(); d.setHours(h, min, s, 0);
+                    return { date: d.getTime(), text: m.msg, user: m.nick_name || "Sistema" };
+                }).sort((a, b) => a.date - b.date);
 
-                    return { 
-                        date: d.getTime(), 
-                        text: m.msg,
-                        userId: randomId 
-                    };
-                });
-
-                messages.sort((a, b) => a.date - b.date);
-
-                if(messages.length > 0) {
-                    startTime = messages[0].date;
-                    const endTime = messages[messages.length - 1].date;
-                    slider.max = Math.floor((endTime - startTime) / 1000);
-                    
-                    resetToTime(0);
-                    document.getElementById('status-msg').innerText = "PRONTO PARA O VOD";
-                }
-            } catch(err) { 
-                alert("Erro ao ler JSON."); 
-            }
+                startTime = messages[0].date;
+                const endTime = messages[messages.length - 1].date;
+                document.getElementById('timer-slider').max = Math.floor((endTime - startTime) / 1000);
+                resetToTime(0);
+            } catch(e) { alert("Erro no JSON!"); }
         };
         reader.readAsText(e.target.files[0]);
     });
 
-    function formatTime(s) {
-        const h = Math.floor(s / 3600);
-        const m = Math.floor((s % 3600) / 60);
-        const sec = s % 60;
-        return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
-    }
-
-    function timeToSeconds(timeStr) {
-        const parts = timeStr.split(':');
-        if (parts.length !== 3) return null;
-        const h = parseInt(parts[0]) || 0;
-        const m = parseInt(parts[1]) || 0;
-        const s = parseInt(parts[2]) || 0;
-        return (h * 3600) + (m * 60) + s;
-    }
-
     function resetToTime(secs) {
-        currentSeconds = Math.min(Math.max(0, secs), slider.max);
-        slider.value = currentSeconds;
-        displayTime.value = formatTime(currentSeconds);
-        updateChat(true);
+        currentSeconds = secs;
+        document.getElementById('timer-slider').value = secs;
+        document.getElementById('display-time').value = new Date(secs * 1000).toISOString().substr(11, 8);
+        document.getElementById('chat-flow').innerHTML = '';
+        lastRenderedIndex = -1;
+        updateChat();
     }
 
-    function updateChat(forceRefresh = false) {
-        if (forceRefresh) {
-            chatFlow.innerHTML = '';
-            lastRenderedIndex = -1;
-        }
-
+    function updateChat() {
         const virtualTime = startTime + (currentSeconds * 1000);
-        const fragment = document.createDocumentFragment();
-        let addedNew = false;
-
         for (let i = lastRenderedIndex + 1; i < messages.length; i++) {
             const m = messages[i];
             if (m.date <= virtualTime) {
-                if (m.text) {
+                if (m.text?.trim()) {
+                    const color = getUserColor(m.user);
                     const card = document.createElement('div');
                     card.className = 'msg-card';
-                    // AQUI É ONDE O ID APARECE
-                    card.innerHTML = `<div class="sender">${m.userId}</div><div class="text">${m.text}</div>`;
-                    fragment.appendChild(card);
-                    addedNew = true;
+                    card.style.borderLeftColor = color;
+                    card.innerHTML = `<div class="sender" style="color:${color}">${m.user}</div><div class="text">${m.text}</div>`;
+                    document.getElementById('chat-flow').appendChild(card);
+                    document.getElementById('chat-flow').scrollTop = document.getElementById('chat-flow').scrollHeight;
                 }
                 lastRenderedIndex = i;
-            } else { break; }
-        }
-
-        if (addedNew) {
-            const status = document.getElementById('status-msg');
-            if(status) status.remove();
-            chatFlow.appendChild(fragment);
-            chatFlow.scrollTop = chatFlow.scrollHeight;
+            } else break;
         }
     }
 
-    displayTime.addEventListener('input', (e) => {
-        let val = e.target.value.replace(/\D/g, ""); 
-        if (val.length > 6) val = val.slice(0, 6);
-        
-        let masked = "";
-        if (val.length > 0) masked += val.slice(0, 2);
-        if (val.length > 2) masked += ":" + val.slice(2, 4);
-        if (val.length > 4) masked += ":" + val.slice(4, 6);
-        
-        e.target.value = masked;
-    });
-
-    displayTime.addEventListener('change', () => {
-        const secs = timeToSeconds(displayTime.value);
-        if (secs !== null) {
-            resetToTime(secs);
-        } else {
-            displayTime.value = formatTime(currentSeconds);
-        }
-    });
-
-    displayTime.addEventListener('keydown', (e) => {
-        if (e.key === "Enter") displayTime.blur();
-    });
-
-    playBtn.addEventListener('click', () => {
-        if (messages.length === 0) return alert("Carregue o arquivo primeiro.");
+    document.getElementById('playBtn').addEventListener('click', function() {
         isPlaying = !isPlaying;
-        playBtn.innerText = isPlaying ? "PAUSE" : "PLAY";
-        
+        this.innerText = isPlaying ? "PAUSE" : "PLAY";
         if(isPlaying) {
             interval = setInterval(() => {
                 currentSeconds++;
-                if (currentSeconds > slider.max) {
+                if (currentSeconds > document.getElementById('timer-slider').max) {
                     clearInterval(interval);
-                    isPlaying = false;
-                    playBtn.innerText = "FIM";
                     return;
                 }
-                slider.value = currentSeconds;
-                displayTime.value = formatTime(currentSeconds);
+                document.getElementById('timer-slider').value = currentSeconds;
+                document.getElementById('display-time').value = new Date(currentSeconds * 1000).toISOString().substr(11, 8);
                 updateChat();
             }, 1000);
-        } else { clearInterval(interval); }
+        } else clearInterval(interval);
     });
 
-    slider.addEventListener('input', () => {
-        resetToTime(parseInt(slider.value));
+    document.getElementById('timer-slider').addEventListener('input', function() {
+        resetToTime(parseInt(this.value));
     });
 </script>
-
 </body>
 </html>
